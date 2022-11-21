@@ -10,16 +10,28 @@ public class Player : MonoBehaviour
 {
     [SerializeField] private Hook _hook;
 
-    public float speed;
-    public float maxSpeed;
-    public float brakingSpeed;
-    public float JumpForce;
-    public float StompForce;
-    // public float GroundCheckDistance;
-    // public float objectMass;
+    public float moveSpeed;
+    public float acceleration;
+    public float deceleration;
+    public float velocityPower;
+
+    public float frictionAmount;
+
+    public float jumpForce;
+
+    public float jumpBufferTime;
+    public float jumpCoyoteTime;
+
+    public float jumpCutMultiplier;
 
     private Rigidbody2D _rigidbody;
+    private Collider2D _collider;
     private bool _isGround;
+    
+    private float lastGroundedTime = 0;
+    private float lastJumpTime = 0;
+    private bool isJumping = false;
+    private bool jumpInputReleased = true;
 
 
     private void Start()
@@ -30,60 +42,21 @@ public class Player : MonoBehaviour
     private void Update()
     {
         UseHook();
-        UpdateVerticalPosition();
-        UpdateHorizontalPosition();
 
         UIManager.SetVelocityText(((int)(_rigidbody.velocity.magnitude * 10) / 10.0f).ToString());
     }
-
-    /// <summary>
-    /// Обновляет позицию игрока при нажатии W и S.
-    /// W - прыжок
-    /// S - ускорение вертикально вниз, для большей маневренности
-    /// </summary>
-    private void UpdateVerticalPosition()
+    
+    private int UpdateMovementKeys()
     {
-        if (Input.GetKeyDown(KeyCode.W) && _isGround)
+        if (Input.GetKey(KeyCode.A))
         {
-            _rigidbody.AddForce(Vector2.up * JumpForce);
+            return -1;
         }
-
-        if (Input.GetKeyDown(KeyCode.S))
+        if (Input.GetKey(KeyCode.D))
         {
-            _rigidbody.AddForce(Vector2.down * StompForce);
+            return 1;
         }
-
-    }
-    /// <summary>
-    /// Обновляет позицию игрока при нажатии A и D.
-    /// Общий принцип остался тот же, но сделан небольшой рефактор.
-    /// Также добавлена возможность передвижения в воздухе и внутри проекта
-    /// исправлена возможность прикрепляться к стенам.
-    /// </summary>
-    private void UpdateHorizontalPosition()
-    {
-        Vector2 velocity = _rigidbody.velocity;
-
-        if (_hook.enabled)
-            return;
-
-        float horizontalDirection = (Input.GetKey(KeyCode.A) || Input.GetKeyDown(KeyCode.A)) ? -1 :
-            ((Input.GetKeyDown(KeyCode.D) || Input.GetKey(KeyCode.D)) ? 1 : 0);
-        if (horizontalDirection != 0)
-        {
-            _rigidbody.AddForce(new Vector2(horizontalDirection, 0) * speed, ForceMode2D.Impulse);
-
-            if (!(Mathf.Abs(_rigidbody.velocity.x) > maxSpeed))
-                return;
-
-            velocity.x = _rigidbody.velocity.x > 0 ? maxSpeed : -maxSpeed;
-            _rigidbody.velocity = velocity;
-        }
-        else if (_rigidbody.velocity.x != 0)
-        {
-            velocity.x = Mathf.Lerp(velocity.x, 0, brakingSpeed * Time.fixedDeltaTime * 5);
-            _rigidbody.velocity = velocity;
-        }
+        return 0;
     }
     /// <summary>
     /// Применение крюка-кошки.
@@ -113,9 +86,101 @@ public class Player : MonoBehaviour
         _isGround = false;
     }
 
+    private void Jump()
+    {
+        _rigidbody.AddForce(Vector2.up * jumpForce, ForceMode2D.Impulse);
+        lastGroundedTime = 0;
+        lastJumpTime = 0;
+        isJumping = true;
+        jumpInputReleased = false;
+        onJump();
+        
+    }
+
+    public void onJump()
+    {
+        lastJumpTime = jumpBufferTime;
+    }
+
+    public void onJumpUp()
+    {
+        if (_rigidbody.velocity.y > 0 && isJumping)
+        {
+            _rigidbody.AddForce(Vector2.down * (_rigidbody.velocity.y * (1 - jumpCutMultiplier)), ForceMode2D.Impulse);
+        }
+
+        jumpInputReleased = false;
+        lastJumpTime = 0;
+    }
+
     private void FixedUpdate()
     {
+        int moveInput = UpdateMovementKeys();
+        isJumping = !_isGround;
+        jumpInputReleased = !Input.GetKey(KeyCode.Space);
+        
+        #region Timers
+        
+        if (_isGround)
+        {
+            lastGroundedTime = jumpCoyoteTime;
+        }
+        else
+        {
+            lastGroundedTime -= Time.deltaTime;
+        }
+        
+        if (isJumping)
+        {
+            lastJumpTime = jumpBufferTime;
+        }
+        else
+        {
+            lastJumpTime -= Time.deltaTime;
+        }
+        
+        #endregion
 
+        #region Run
+        
+        float targetSpeed = moveInput * moveSpeed;
+        
+        float speedDif = targetSpeed - _rigidbody.velocity.x;
+        
+        float accelerationRate = Mathf.Abs(targetSpeed) > 0.01f ? acceleration :
+        deceleration;
+
+        float movement = Mathf.Pow(Mathf.Abs(speedDif) * accelerationRate, velocityPower) * Mathf.Sign(speedDif);
+        
+        _rigidbody.AddForce(movement * Vector2.right);
+        
+        #endregion
+        
+        #region Friction
+
+        if (lastGroundedTime > 0 && moveInput == 0)
+        {
+            float amount = Mathf.Min(Mathf.Abs(_rigidbody.velocity.x), Mathf.Abs(frictionAmount));
+
+            amount *= Mathf.Sign(_rigidbody.velocity.x);
+            
+            _rigidbody.AddForce(Vector2.right * -amount, ForceMode2D.Impulse);
+        }
+        
+        #endregion
+        
+        #region Jump
+
+        if (lastGroundedTime > 0 && lastJumpTime > 0 && !isJumping && Input.GetKey(KeyCode.Space))
+        {
+            Jump();
+        }
+        onJumpUp();
+        #endregion
+        
+        #region Coyote 
+        
+        #endregion
     }
     
 }
