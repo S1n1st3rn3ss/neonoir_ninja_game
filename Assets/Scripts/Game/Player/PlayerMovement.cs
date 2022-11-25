@@ -6,11 +6,10 @@
 	Feel free to use this in your own games, and I'd love to see anything you make!
  */
 
-using System;
 using System.Collections;
 using UnityEngine;
 
-public class Player : MonoBehaviour
+public class PlayerMovement : MonoBehaviour
 {
 	//Scriptable object which holds all the player's movement parameters. If you don't want to use it
 	//just paste in all the parameters, though you will need to manuly change all references in this script
@@ -23,7 +22,6 @@ public class Player : MonoBehaviour
 	#region Variables
 	//Components
     public Rigidbody2D RB { get; private set; }
-	// [SerializeField] private Hook _hook;
 
 	//Variables control the various actions the player can perform at any time.
 	//These are fields which can are public allowing for other sctipts to read them
@@ -77,7 +75,6 @@ public class Player : MonoBehaviour
 
 	private void Update()
 	{
-		// UseHook();
         #region TIMERS
         LastOnGroundTime -= Time.deltaTime;
 		LastOnWallTime -= Time.deltaTime;
@@ -319,7 +316,7 @@ public class Player : MonoBehaviour
 	}
     #endregion
 
-	#region JUMP METHODS
+    #region JUMP METHODS
     private void Jump()
 	{
 		//Ensures we can't call Jump multiple times from one press

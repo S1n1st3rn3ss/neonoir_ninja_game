@@ -9,11 +9,11 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: db0ab18d848c92b4081d586f67442ddd, type: 3}
-  m_Name: MainPlayer
+  m_Script: {fileID: 11500000, guid: 5759d6a660e3ac14dbd9a801bf9d7627, type: 3}
+  m_Name: Celeste Style
   m_EditorClassIdentifier: 
   gravityStrength: -77.77777
-  gravityScale: 7.9284167
+  gravityScale: 2.5925925
   fallGravityMult: 1.5
   maxFallSpeed: 25
   fastFallGravityMult: 2
